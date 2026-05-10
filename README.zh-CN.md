@@ -45,7 +45,7 @@ npm 包只是分发工具。真正重要的是 `guard:` 约定、完整项目级
 | --- | --- | --- |
 | Codex | `.agents/skills/codebase-guard/SKILL.md` | `AGENTS.md` |
 | Claude Code | `.claude/skills/codebase-guard/SKILL.md` | `CLAUDE.md` |
-| Trae | `.trae/skills/codebase-guard/SKILL.md` | `.trae/project_rules.md` |
+| Trae | `.trae/skills/codebase-guard/SKILL.md` | `.trae/rules/project_rules.md` |
 
 项目级约束会指向已安装的项目级 skill：
 

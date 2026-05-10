@@ -45,7 +45,7 @@ For each selected tool, `codebase-guard` installs both the full project skill an
 | --- | --- | --- |
 | Codex | `.agents/skills/codebase-guard/SKILL.md` | `AGENTS.md` |
 | Claude Code | `.claude/skills/codebase-guard/SKILL.md` | `CLAUDE.md` |
-| Trae | `.trae/skills/codebase-guard/SKILL.md` | `.trae/project_rules.md` |
+| Trae | `.trae/skills/codebase-guard/SKILL.md` | `.trae/rules/project_rules.md` |
 
 The instruction section points to the installed project skill:
 

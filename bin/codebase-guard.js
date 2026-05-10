@@ -25,7 +25,7 @@ const TOOL_TARGETS = {
   },
   trae: {
     label: "Trae",
-    file: path.join(".trae", "project_rules.md"),
+    file: path.join(".trae", "rules", "project_rules.md"),
     skillDir: path.join(".trae", "skills", SKILL_NAME),
   },
 };
