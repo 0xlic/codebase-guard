@@ -1,9 +1,9 @@
 {
   "name": "codebase-guard",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Install the codebase-guard skill and project guard instructions.",
   "bin": {
-    "codebase-guard": "./bin/codebase-guard.js"
+    "codebase-guard": "bin/codebase-guard.js"
   },
   "files": [
     "README.md",
@@ -13,6 +13,14 @@
     "snippets/"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0xlic/codebase-guard.git"
+  },
+  "homepage": "https://github.com/0xlic/codebase-guard#readme",
+  "bugs": {
+    "url": "https://github.com/0xlic/codebase-guard/issues"
+  },
   "engines": {
     "node": ">=18"
   }
