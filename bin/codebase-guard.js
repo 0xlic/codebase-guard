@@ -16,27 +16,34 @@ const TOOL_TARGETS = {
   codex: {
     label: "Codex",
     file: "AGENTS.md",
+    skillDir: path.join(".agents", "skills", SKILL_NAME),
   },
   claude: {
     label: "Claude Code",
     file: "CLAUDE.md",
+    skillDir: path.join(".claude", "skills", SKILL_NAME),
   },
   trae: {
     label: "Trae",
     file: path.join(".trae", "project_rules.md"),
+    skillDir: path.join(".trae", "skills", SKILL_NAME),
   },
 };
 
 function usage() {
   console.log(`Usage:
-  codebase-guard init [--tools LIST] [--lang zh-CN|en] [--skills-dir DIR] [--project-dir DIR]
-  codebase-guard update [--tools LIST] [--lang zh-CN|en] [--skills-dir DIR] [--project-dir DIR]
-  codebase-guard status [--tools LIST] [--skills-dir DIR] [--project-dir DIR]
+  codebase-guard init [--tools LIST] [--lang zh-CN|en] [--project-dir DIR]
+  codebase-guard update [--tools LIST] [--lang zh-CN|en] [--project-dir DIR]
+  codebase-guard status [--tools LIST] [--project-dir DIR]
+  codebase-guard install-skill [--skills-dir DIR]
+  codebase-guard update-skill [--skills-dir DIR]
 
 Commands:
-  init     Install or overwrite SKILL.md, then create or replace selected project instruction snippets.
-  update   Remove the installed SKILL.md, reinstall it, then replace selected project instruction snippets.
-  status   Print skill and project instruction status.
+  init          Install project skills and create or replace selected project instruction snippets.
+  update        Update project skills and replace selected project instruction snippets.
+  status        Print project instruction status.
+  install-skill Install or overwrite SKILL.md in the global skills directory.
+  update-skill  Remove the installed SKILL.md, then reinstall it.
 
 Options:
   --tools LIST     Comma-separated tools: codex,claude,trae,all. Prompts in an interactive terminal when omitted for init/update.
@@ -224,6 +231,11 @@ function sourceSnippetPath(lang) {
   return path.join(PACKAGE_ROOT, "snippets", `project.${lang}.md`);
 }
 
+function renderSnippet(tool, lang) {
+  const template = fs.readFileSync(sourceSnippetPath(lang), "utf8");
+  return template.replaceAll("{{SKILL_PATH}}", toPosixPath(path.join(TOOL_TARGETS[tool].skillDir, "SKILL.md")));
+}
+
 function installedSkillDir(skillsDir) {
   return path.join(skillsDir, SKILL_NAME);
 }
@@ -255,6 +267,22 @@ function projectInstructionPath(projectDir, tool) {
   return path.join(projectDir, TOOL_TARGETS[tool].file);
 }
 
+function projectSkillPath(projectDir, tool) {
+  return path.join(projectDir, TOOL_TARGETS[tool].skillDir, "SKILL.md");
+}
+
+function installProjectSkill(projectDir, tool) {
+  if (!fs.existsSync(projectDir) || !fs.statSync(projectDir).isDirectory()) {
+    throw new Error(`Project directory does not exist: ${projectDir}`);
+  }
+
+  const skillPath = projectSkillPath(projectDir, tool);
+  const existed = fs.existsSync(skillPath);
+  fs.mkdirSync(path.dirname(skillPath), { recursive: true });
+  fs.copyFileSync(sourceSkillPath(), skillPath);
+  return { path: skillPath, action: existed ? "replaced" : "created", tool };
+}
+
 function upsertProjectSnippet(projectDir, tool, lang) {
   if (!fs.existsSync(projectDir) || !fs.statSync(projectDir).isDirectory()) {
     throw new Error(`Project directory does not exist: ${projectDir}`);
@@ -263,14 +291,13 @@ function upsertProjectSnippet(projectDir, tool, lang) {
   const instructionPath = projectInstructionPath(projectDir, tool);
   fs.mkdirSync(path.dirname(instructionPath), { recursive: true });
 
-  const snippet = normalizeNewline(fs.readFileSync(sourceSnippetPath(lang), "utf8"));
+  const snippet = normalizeNewline(renderSnippet(tool, lang));
   const existing = fs.existsSync(instructionPath) ? fs.readFileSync(instructionPath, "utf8") : "";
-  const start = existing.indexOf(MANAGED_START);
-  const end = existing.indexOf(MANAGED_END);
+  const block = findManagedBlock(existing);
 
-  if (start >= 0 && end >= start) {
-    const afterEnd = end + MANAGED_END.length;
-    const next = `${existing.slice(0, start)}${snippet.trimEnd()}${existing.slice(afterEnd)}`;
+  if (block) {
+    const suffix = existing.slice(block.end).replace(/^\n*/, "");
+    const next = `${existing.slice(0, block.start)}${snippet.trimEnd()}${suffix ? `\n\n${suffix}` : ""}`;
     fs.writeFileSync(instructionPath, normalizeNewline(next), "utf8");
     return { path: instructionPath, action: "replaced", tool };
   }
@@ -280,12 +307,51 @@ function upsertProjectSnippet(projectDir, tool, lang) {
   return { path: instructionPath, action: existing ? "appended" : "created", tool };
 }
 
+function findManagedBlock(content) {
+  const markerStart = content.indexOf(MANAGED_START);
+  const markerEnd = content.indexOf(MANAGED_END);
+  if (markerStart >= 0 && markerEnd >= markerStart) {
+    return { start: markerStart, end: markerEnd + MANAGED_END.length };
+  }
+
+  const lines = content.split(/(?<=\n)/);
+  let offset = 0;
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const heading = line.match(/^(#{1,6})\s+Codebase Guard\s*$/);
+    if (!heading) {
+      offset += line.length;
+      continue;
+    }
+
+    const level = heading[1].length;
+    let end = offset + line.length;
+    for (let next = index + 1; next < lines.length; next += 1) {
+      const nextHeading = lines[next].match(/^(#{1,6})\s+\S/);
+      if (nextHeading && nextHeading[1].length <= level) {
+        break;
+      }
+      end += lines[next].length;
+    }
+    return { start: offset, end };
+  }
+  return null;
+}
+
 function hasManagedSnippet(projectDir, tool) {
   const instructionPath = projectInstructionPath(projectDir, tool);
   if (!fs.existsSync(instructionPath)) {
     return false;
   }
-  return fs.readFileSync(instructionPath, "utf8").includes(MANAGED_START);
+  return findManagedBlock(fs.readFileSync(instructionPath, "utf8")) !== null;
+}
+
+function hasProjectSkill(projectDir, tool) {
+  return fs.existsSync(projectSkillPath(projectDir, tool));
+}
+
+function toPosixPath(value) {
+  return value.split(path.sep).join("/");
 }
 
 function printProjectResults(results) {
@@ -295,29 +361,34 @@ function printProjectResults(results) {
   }
 }
 
-function status(args, tools) {
-  const skillPath = installedSkillPath(args.skillsDir);
-  const hasSkill = fs.existsSync(skillPath);
-  console.log(`skill: ${hasSkill ? "installed" : "missing"} ${skillPath}`);
+function printSkillResults(results) {
+  for (const result of results) {
+    const label = TOOL_TARGETS[result.tool].label;
+    console.log(`${result.action} ${label} skill: ${result.path}`);
+  }
+}
 
+function status(args, tools) {
   for (const tool of tools) {
     const targetPath = projectInstructionPath(args.projectDir, tool);
-    console.log(`${tool}: ${hasManagedSnippet(args.projectDir, tool) ? "configured" : "missing"} ${targetPath}`);
+    const skillPath = projectSkillPath(args.projectDir, tool);
+    console.log(`${tool}: instructions ${hasManagedSnippet(args.projectDir, tool) ? "configured" : "missing"} ${targetPath}`);
+    console.log(`${tool}: skill ${hasProjectSkill(args.projectDir, tool) ? "installed" : "missing"} ${skillPath}`);
   }
 }
 
 function init(args, tools, lang) {
-  const skillPath = installSkill(args.skillsDir);
-  const results = tools.map((tool) => upsertProjectSnippet(args.projectDir, tool, lang));
-  console.log(`installed skill: ${skillPath}`);
-  printProjectResults(results);
+  const skillResults = tools.map((tool) => installProjectSkill(args.projectDir, tool));
+  const snippetResults = tools.map((tool) => upsertProjectSnippet(args.projectDir, tool, lang));
+  printSkillResults(skillResults);
+  printProjectResults(snippetResults);
 }
 
 function update(args, tools, lang) {
-  const skillPath = reinstallSkill(args.skillsDir);
-  const results = tools.map((tool) => upsertProjectSnippet(args.projectDir, tool, lang));
-  console.log(`updated skill: ${skillPath}`);
-  printProjectResults(results);
+  const skillResults = tools.map((tool) => installProjectSkill(args.projectDir, tool));
+  const snippetResults = tools.map((tool) => upsertProjectSnippet(args.projectDir, tool, lang));
+  printSkillResults(skillResults);
+  printProjectResults(snippetResults);
 }
 
 async function main() {
@@ -328,13 +399,20 @@ async function main() {
       return 0;
     }
 
-    const tools = await resolveTools(args);
-    const lang = await resolveLang(args);
-    if (args.command === "init") {
+    if (args.command === "install-skill") {
+      console.log(`installed skill: ${installSkill(args.skillsDir)}`);
+    } else if (args.command === "update-skill") {
+      console.log(`updated skill: ${reinstallSkill(args.skillsDir)}`);
+    } else if (args.command === "init") {
+      const tools = await resolveTools(args);
+      const lang = await resolveLang(args);
       init(args, tools, lang);
     } else if (args.command === "update") {
+      const tools = await resolveTools(args);
+      const lang = await resolveLang(args);
       update(args, tools, lang);
     } else if (args.command === "status") {
+      const tools = await resolveTools(args);
       status(args, tools);
     } else {
       throw new Error(`Unknown command: ${args.command}`);

@@ -1,6 +1,6 @@
 {
   "name": "codebase-guard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Install the codebase-guard skill and project guard instructions.",
   "bin": {
     "codebase-guard": "bin/codebase-guard.js"
