@@ -1,0 +1,19 @@
+{
+  "name": "codebase-guard",
+  "version": "0.1.0",
+  "description": "Install the codebase-guard skill and project guard instructions.",
+  "bin": {
+    "codebase-guard": "./bin/codebase-guard.js"
+  },
+  "files": [
+    "README.md",
+    "README.zh-CN.md",
+    "SKILL.md",
+    "bin/",
+    "snippets/"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}
