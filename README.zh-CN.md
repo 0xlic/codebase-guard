@@ -60,9 +60,9 @@ npm 包只是分发工具。真正重要的是 `guard:` 约定、完整项目级
 
 重复安装时，会覆盖所选项目级 skill 文件，并只替换项目约束中的 `## Codebase Guard` 这一节，替换范围到下一个同级或更高级 markdown 标题之前。旧版本写入的 marker 片段也会被识别，并迁移成干净的 markdown section。
 
-## 分发命令
+## 命令说明
 
-安装或更新项目级 skill 和项目级约束：
+下面是主要的项目级命令。它们会为所选工具同时安装或更新项目内 `SKILL.md` 和项目级约束 section。
 
 ```bash
 npx codebase-guard init
@@ -77,17 +77,25 @@ npx codebase-guard init --tools codex --lang zh-CN
 npx codebase-guard update --tools all --lang en
 ```
 
+命令行为：
+
+| 命令 | 修改内容 |
+| --- | --- |
+| `init` | 安装项目内 `SKILL.md`，并创建或替换 `## Codebase Guard` section。 |
+| `update` | 覆盖项目内 `SKILL.md`，并替换 `## Codebase Guard` section。 |
+| `status` | 检查所选工具是否同时配置了项目内 skill 和项目级约束。 |
+
 检查配置：
 
 ```bash
 npx codebase-guard status
 ```
 
-CLI 默认只处理项目级内容。`init` 和 `update` 会安装项目级 skill，不会安装全局 skill。
+CLI 默认只处理项目级内容。`init` 和 `update` 永远不会安装全局 skill。
 
-## 可选安装 Skill
+## 可选全局 Skill 安装
 
-如果你明确想把完整 `SKILL.md` 安装到全局 skills 目录：
+通常不需要使用这一组命令。只有当你明确想把完整 `SKILL.md` 安装到当前项目之外的全局 skills 目录时，才需要执行：
 
 ```bash
 npx codebase-guard install-skill

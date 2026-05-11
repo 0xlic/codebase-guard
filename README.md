@@ -60,9 +60,9 @@ The instruction section points to the installed project skill:
 
 Repeated installs overwrite the selected project skill file and replace only the `## Codebase Guard` instruction section, ending before the next same-or-higher-level markdown heading. Older marker-based blocks from previous versions are also migrated to this clean markdown section.
 
-## Distribution CLI
+## Command Reference
 
-Install or update the project skill and project-level instruction section:
+These are the primary project-level commands. They install or update both the project-local skill and the project instruction section for the selected tools.
 
 ```bash
 npx codebase-guard init
@@ -77,17 +77,25 @@ npx codebase-guard init --tools codex --lang zh-CN
 npx codebase-guard update --tools all --lang en
 ```
 
+Command behavior:
+
+| Command | What it changes |
+| --- | --- |
+| `init` | Installs project-local `SKILL.md` files and creates or replaces the `## Codebase Guard` section. |
+| `update` | Overwrites project-local `SKILL.md` files and replaces the `## Codebase Guard` section. |
+| `status` | Checks whether selected tools have both project-local skills and project instruction sections. |
+
 Check configuration:
 
 ```bash
 npx codebase-guard status
 ```
 
-The CLI is project-level by default. It installs project-local skills during `init` and `update`, not global skills.
+The CLI is project-level by default. `init` and `update` never install global skills.
 
-## Optional Skill Installation
+## Optional Global Skill Installation
 
-If you explicitly want the full `SKILL.md` installed into a global skills directory:
+This is usually not needed. Use it only if you explicitly want the full `SKILL.md` installed into a global skills directory outside the current project:
 
 ```bash
 npx codebase-guard install-skill
